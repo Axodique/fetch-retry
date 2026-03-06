@@ -1067,15 +1067,17 @@ if (!(/** @type {any} */ (window))._fetchRetryPatched) {
                     return processedResult;
                 }
                 
-                // Handle specific error codes
+// Handle specific error codes
                 if (result.status === 429) {
                     console.warn(`[Fetch Retry] Rate limited (429), attempt ${attempt + 1}/${fetchRetrySettings.maxRetries + 1}`);
+                    throw new Error(`HTTP 429: Too Many Requests`); // Throws to trigger the retry block
                 } else if (result.status >= 500) {
                     console.warn(`[Fetch Retry] Server error (${result.status}), attempt ${attempt + 1}/${fetchRetrySettings.maxRetries + 1}`);
-				} else if (result.status >= 400) {
-                    // Client errors other than 429 usually don't need retry
+                    throw new Error(`HTTP ${result.status}: Server Error`); // Throws to trigger the retry block
+                } else if (result.status >= 400) {
+                    // Client errors other than 429 usually don't need retry (404, 401, etc.)
                     console.error(`[Fetch Retry] Client error (${result.status}): ${result.statusText}. Not retrying.`);
-                    break;
+                    break; // Breaks loop and immediately returns the response
                 }
                 
                 console.error(`[Fetch Retry] Unexpected HTTP status: ${result.status}. Not retrying.`);
