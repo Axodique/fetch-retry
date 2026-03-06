@@ -1072,14 +1072,14 @@ if (!(/** @type {any} */ (window))._fetchRetryPatched) {
                     console.warn(`[Fetch Retry] Rate limited (429), attempt ${attempt + 1}/${fetchRetrySettings.maxRetries + 1}`);
                 } else if (result.status >= 500) {
                     console.warn(`[Fetch Retry] Server error (${result.status}), attempt ${attempt + 1}/${fetchRetrySettings.maxRetries + 1}`);
-                } else if (result.status >= 400) {
+				} else if (result.status >= 400) {
                     // Client errors other than 429 usually don't need retry
                     console.error(`[Fetch Retry] Client error (${result.status}): ${result.statusText}. Not retrying.`);
-                    throw new Error(`HTTP ${result.status}: ${result.statusText}`);
+                    break;
                 }
                 
-                console.error(`[Fetch Retry] Unexpected HTTP status: ${result.status}. Throwing error.`);
-                throw new Error(`HTTP ${result.status}: ${result.statusText}`);
+                console.error(`[Fetch Retry] Unexpected HTTP status: ${result.status}. Not retrying.`);
+                break;
                 
             } catch (err) {
                 clearTimeout(timeoutId); // Make sure timeout is cleared if there's another error
@@ -1122,9 +1122,14 @@ if (!(/** @type {any} */ (window))._fetchRetryPatched) {
                     shouldRetry = true; // Default to true for unknown errors to attempt recovery
                 }
 
-                if (shouldRetry) {
+				if (shouldRetry) {
                     console.warn(`[Fetch Retry] ${retryReason}, retrying... attempt ${attempt + 1}/${fetchRetrySettings.maxRetries + 1}`);
+                } else {
+                    console.log('[Fetch Retry] Error is not retryable. Breaking retry loop.');
+                    break;
                 }
+                
+                // If max retries reached, break
                 
                 // If max retries reached, break
                 if (attempt >= fetchRetrySettings.maxRetries) {
@@ -1142,11 +1147,17 @@ if (!(/** @type {any} */ (window))._fetchRetryPatched) {
             }
         }
         
-        // If we get here, all attempts failed
-        console.error(`[Fetch Retry] All ${fetchRetrySettings.maxRetries + 1} attempts failed. Final error:`, lastError);
+// If we get here, either all attempts failed or we intentionally broke out
+        if (attempt >= fetchRetrySettings.maxRetries && lastError) {
+            console.error(`[Fetch Retry] All ${fetchRetrySettings.maxRetries + 1} attempts failed. Final error:`, lastError);
+            showErrorNotification(lastError, lastResponse);
+        }
         
-        // Show error notification
-        showErrorNotification(lastError, lastResponse);
+        // Preserve native fetch behavior: if we have a valid response (even if it's 404 or 500), return it.
+        // fetch() should only throw/reject on actual network failures or aborts.
+        if (lastResponse) {
+            return lastResponse;
+        }
         
         throw lastError;
     };
