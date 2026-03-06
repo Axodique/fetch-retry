@@ -28,7 +28,7 @@ If you want to help improve or fix this extension, feel free to fork this reposi
 4. Paste the GitHub repository link:
 
    ```
-   https://github.com/Hikarushmz/fetch-retry
+   https://github.com/Axodique/fetch-retry/tree/main
    ```
 5. Restart SillyTavern
 
